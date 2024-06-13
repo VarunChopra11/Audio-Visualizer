@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Pitch Circle</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+
+        #circle {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            border-radius: 50%;
+            background-color: #3498db;
+            width: 100px; /* Default size */
+            height: 100px; /* Default size */
+            /* font-size: 2.5vw; */
+        }
+        
+    </style>
+</head>
+<body>
+    <div id="circle"> <p class="responsive-text">Say Hey <br> Friday !</p> </div>
+    <script>
+        const circle = document.getElementById('circle');
+        const defaultRadius = 50; // Default radius
+        const maxRadius = defaultRadius * 2 ; // Maximum radius (double the default size)
+
+        function resizeCircle(radius) {
+            circle.style.width = `${radius * 2}px`;
+            circle.style.height = `${radius * 2}px`;
+            circle.style.fontSize = `${radius / 2.5}px`; // Font size is 1/2.5 of the radius
+        }
+
+        function getAverageAmplitude(dataArray) {
+            let sum = 0;
+            for (let i = 0; i < dataArray.length; i++) {
+                sum += Math.abs(dataArray[i] - 128); // Centering around 0
+            }
+            return sum / dataArray.length;
+        }
+
+        async function start() {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const analyser = audioContext.createAnalyser();
+            const source = audioContext.createMediaStreamSource(stream);
+            source.connect(analyser);
+
+            analyser.fftSize = 2048;
+            const bufferLength = analyser.fftSize;
+            const dataArray = new Uint8Array(bufferLength);
+
+            function draw() {
+                requestAnimationFrame(draw);
+
+                analyser.getByteTimeDomainData(dataArray);
+
+                const amplitude = getAverageAmplitude(dataArray);
+                const scaledRadius = amplitude * 40; // Increased scale factor for higher sensitivity
+                const radius = Math.min(Math.max(scaledRadius, defaultRadius), maxRadius);
+                resizeCircle(radius);
+            }
+
+            draw();
+        }
+
+        start().catch(console.error);
+    </script>
+</body>
+</html>
